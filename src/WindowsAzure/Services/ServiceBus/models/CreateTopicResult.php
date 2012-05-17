@@ -54,7 +54,7 @@ class CreateTopicResult
     public static function create($response)
     {
         $createTopicResult = new CreateTopicResult();
-        $feed = Feed::creat($response);
+        $feed = Feed::create($response);
         $content = $feed->getContent();
         $this->_topicDescription = XmlSerializer::objectDeserialize($content->getText()); 
         return $createTopicResult;

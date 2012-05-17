@@ -321,8 +321,8 @@ class ServiceBusRestProxy extends ServiceRestProxy implements IServiceBus
         );
 
         $entry = new Entry();
-        $content = new Content();
-        $content->setText($queueDescriptionXml);
+        $content = new Content($queueDescriptionXml);
+        $content->setType('application/xml');
         $entry->setContent($content);
         $httpCallContext->setBody($entry->toXml());
         $response = $this->sendContext($httpCallContext);

@@ -144,7 +144,7 @@ class Feed
      */
     public function setCategory($category)
     {
-        $this->_category = $cateogry;
+        $this->_category = $category;
     }
    
     /**

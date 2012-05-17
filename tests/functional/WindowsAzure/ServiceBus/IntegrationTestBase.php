@@ -40,43 +40,41 @@ class IntegrationTestBase extends ServiceBusRestProxyTestBase {
     
     public function setUp() {
         parent::setUp();
+        $this->initialize();
     }
 
     public static function setUpBeforeClass() {
         parent::setUpBeforeClass();
     }
 
-    public function testInitialize() {
-        $testAlphaExists = false;
-        $config = createConfiguration();
-        
-        $this->wrapper->create($config);
-        foreach(iterateQueues($this->wrapper) as $queue)  {
-            $queueName = $queue->getPath();
-            if ($queueName->startsWith('Test') || $queueName->startsWith('test')) {
-                if ($queueName->equalsIgnoreCase('TestAlpha')) {
-                    $testAlphaExists = true;
-                    $count = $queue->getMessageCount();
-                    for ($i = 0; $i != $count; $i++) {
-                        $opts = new ReceiveMessageOptions();
-                        $opts->setTimeout(20);
-                        $this->wrapper->receiveQueueMessage($queueName, $opts);
-                    }
-                }
-                else {
-                    $service->deleteQueue($queueName);
-                }
-            }
-        }
-        foreach(iterateTopics($service) as $topic)  {
-            $topicName = $topic->getPath();
-            if ($topicName->startsWith('Test') || $topicName->startsWith('test')) {
-                $service->deleteQueue($topicName);
-            }
-        }
-        if (!$testAlphaExists) {
-            $service->createQueue(new QueueInfo('TestAlpha'));
-        }
+    public function initialize() {
+//        $testAlphaExists = false;
+//        foreach(iterateQueues($this->wrapper) as $queue)  {
+//            $queueName = $queue->getPath();
+//            if ($queueName->startsWith('Test') || $queueName->startsWith('test')) {
+//                if ($queueName->equalsIgnoreCase('TestAlpha')) {
+//                    $testAlphaExists = true;
+//                    $count = $queue->getMessageCount();
+//                    for ($i = 0; $i != $count; $i++) {
+//                        $opts = new ReceiveMessageOptions();
+//                        $opts->setTimeout(20);
+//                        $this->wrapper->receiveQueueMessage($queueName, $opts);
+//                    }
+//                }
+//                else {
+//                    $service->deleteQueue($queueName);
+//                }
+//            }
+//        }
+//        foreach(iterateTopics($service) as $topic)  {
+//            $topicName = $topic->getPath();
+//            if ($topicName->startsWith('Test') || $topicName->startsWith('test')) {
+//                $service->deleteQueue($topicName);
+//            }
+//        }
+//        if (!$testAlphaExists) {
+//            $service->createQueue(new QueueInfo('TestAlpha'));
+//        }
     }
 }
 

@@ -54,7 +54,7 @@ class CreateRuleResult
     public static function create($response)
     {
         $createRuleResult = new CreateRuleResult();
-        $feed = Feed::creat($response);
+        $feed = Feed::create($response);
         $content = $feed->getContent();
         $this->_ruleDescription = XmlSerializer::objectDeserialize($content->getText()); 
         return $createRuleResult;

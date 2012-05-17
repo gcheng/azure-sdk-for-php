@@ -48,7 +48,8 @@ use WindowsAzure\Services\ServiceBus\models\ListQueuesResult;
 use WindowsAzure\Services\ServiceBus\models\ListRulesResult;
 use WindowsAzure\Services\ServiceBus\models\ListSubscriptionsResult;
 use WindowsAzure\Services\ServiceBus\models\ListTopicsResult;
-use WindowsAzure\Services\ServiceBus\models\QueueInfo;
+use WindowsAzure\Services\ServiceBus\Models\QueueInfo;
+use WindowsAzure\Services\ServiceBus\Models\QueueDescription;
 use WindowsAzure\Services\ServiceBus\models\ReceiveMessageOptions;
 use WindowsAzure\Services\ServiceBus\models\RuleInfo;
 use WindowsAzure\Services\ServiceBus\models\SubscriptionInfo;
@@ -67,23 +68,23 @@ class ServiceBusIntegrationTest extends IntegrationTestBase {
 //        Configuration->setInstance($config);
 //        $service = ServiceBusService->create();
 //    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listQueues
-    */
-    public function testFetchQueueAndListQueuesWorks() {
-        // Arrange
-        
-        // Act
-        $entry = $this->wrapper->getQueue('TestAlpha')->getValue();
-        $feed = $this->wrapper->listQueues();
-
-        // Assert
-        $this->assertNotNull($entry, '$entry');
-        $this->assertNotNull($feed, '$feed');
-    }
-
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listQueues
+//    */
+//    public function testFetchQueueAndListQueuesWorks() {
+//        // Arrange
+//        
+//        // Act
+//        $entry = $this->wrapper->getQueue('TestAlpha')->getValue();
+//        $feed = $this->wrapper->listQueues();
+//
+//        // Assert
+//        $this->assertNotNull($entry, '$entry');
+//        $this->assertNotNull($feed, '$feed');
+//    }
+//
     /**
     * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
     */
@@ -93,7 +94,16 @@ class ServiceBusIntegrationTest extends IntegrationTestBase {
         // Act
         $queue = null;
         $queue = new QueueInfo('TestCreateQueueWorks');
-        $queue->setMaxSizeInMegabytes(1024);
+        
+        $queueDescription = new QueueDescription();
+        $queueDescription->setMaxSizeInMegabytes(1024);
+        
+        try {
+            $this->wrapper->deleteQueue('TestCreateQueueWorks');
+        } catch (ServiceException $e) {
+            // Ignore
+        }
+        $queue->setQueueDescription($queueDescription);
         $saved = $this->wrapper->createQueue($queue)->getValue();
 
         // Assert
@@ -108,7 +118,11 @@ class ServiceBusIntegrationTest extends IntegrationTestBase {
     */
     public function testDeleteQueueWorks() {
         // Arrange
-         $this->wrapper->createQueue(new QueueInfo('TestDeleteQueueWorks'));
+        try {
+            $this->wrapper->createQueue(new QueueInfo('TestDeleteQueueWorks'));
+        } catch (ServiceException $e) {
+            // Ignore
+        }
 
         // Act
         $this->wrapper->deleteQueue('TestDeleteQueueWorks');
@@ -116,476 +130,476 @@ class ServiceBusIntegrationTest extends IntegrationTestBase {
         // Assert
     }
 
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testSendMessageWorks() {
-        // Arrange
-        $message = new BrokeredMessage('sendMessageWorks');
-
-        // Act
-        $this->wrapper->sendQueueMessage('TestAlpha', $message);
-
-        // Assert
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testReceiveMessageWorks() {
-        // Arrange
-        $queueName = 'TestReceiveMessageWorks';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello World'));
-
-        // Act
-        $message = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS)->getValue();
-        $data = str_pad('', 100, chr(0));
-        $size = $message->getBody()->read($data);
-
-        // Assert
-        $this->assertEquals(11, $size, '$size');
-        $this->assertArrayEquals(substr($data, 0, $size), 'Hello World');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testPeekLockMessageWorks() {
-        // Arrange
-        $queueName = 'TestPeekLockMessageWorks';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
-
-        // Act
-        $message = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
-
-        // Assert
-        $data = str_pad('', 100, chr(0));
-        $size = $message->getBody()->read($data);
-        $this->assertEquals(11, $size, '$size');
-        $this->assertEquals('Hello Again', new String($data, 0, $size), 'new String($data, 0, $size)');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testPeekLockedMessageCanBeCompleted() {
-        // Arrange
-        $queueName = 'TestPeekLockedMessageCanBeCompleted';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
-        $message = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
-
-        // Act
-        $lockToken = $message->getLockToken();
-        $lockedUntil = $message->getLockedUntilUtc();
-        $lockLocation = $message->getLockLocation();
-
-        $this->wrapper->deleteMessage($message);
-
-        // Assert
-        $this->assertNotNull($lockToken, '$lockToken');
-        $this->assertNotNull($lockedUntil, '$lockedUntil');
-        $this->assertNotNull($lockLocation, '$lockLocation');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::unlockMessage
-    */
-    public function testPeekLockedMessageCanBeUnlocked() {
-        // Arrange
-        $queueName = 'TestPeekLockedMessageCanBeUnlocked';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
-        $peekedMessage = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
-
-        // Act
-        $lockToken = $peekedMessage->getLockToken();
-        $lockedUntil = $peekedMessage->getLockedUntilUtc();
-
-        $this->wrapper->unlockMessage($peekedMessage);
-        $receivedMessage = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS) ->getValue();
-
-        // Assert
-        $this->assertNotNull($lockToken, '$lockToken');
-        $this->assertNotNull($lockedUntil, '$lockedUntil');
-        $this->assertNull($receivedMessage->getLockToken(), '$receivedMessage->getLockToken()');
-        $this->assertNull($receivedMessage->getLockedUntilUtc(), '$receivedMessage->getLockedUntilUtc()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testPeekLockedMessageCanBeDeleted() {
-        // Arrange
-        $queueName = 'TestPeekLockedMessageCanBeDeleted';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
-        $peekedMessage = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
-
-        // Act
-        $lockToken = $peekedMessage->getLockToken();
-        $lockedUntil = $peekedMessage->getLockedUntilUtc();
-
-        $this->wrapper->deleteMessage($peekedMessage);
-        $receivedMessage = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS) ->getValue();
-
-        // Assert
-        $this->assertNotNull($lockToken, '$lockToken');
-        $this->assertNotNull($lockedUntil, '$lockedUntil');
-        $this->assertNull($receivedMessage->getLockToken(), '$receivedMessage->getLockToken()');
-        $this->assertNull($receivedMessage->getLockedUntilUtc(), '$receivedMessage->getLockedUntilUtc()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testContentTypePassesThrough() {
-        // Arrange
-        $queueName = 'TestContentTypePassesThrough';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-
-        // Act
-        $message = new BrokeredMessage('<data>Hello Again</data>');
-        $message->setContentType('text/xml');
-        $this->wrapper->sendQueueMessage($queueName, $message);
-
-        $message = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS)->getValue();
-
-        // Assert
-        $this->assertNotNull($message, '$message');
-        $this->assertEquals('text/xml', $message->getContentType(), '$message->getContentType()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listTopics
-    */
-    public function testTopicCanBeCreatedListedFetchedAndDeleted() {
-        // Arrange
-        $topicName = 'TestTopicCanBeCreatedListedFetchedAndDeleted';
-
-        // Act
-        $topic = new TopicInfo();
-        $topic->setPath($topicName);
-        $created = $this->wrapper->createTopic($topic)->getValue();
-        $listed = $this->wrapper->listTopics();
-        $fetched = $this->wrapper->getTopic($topicName)->getValue();
-        $this->wrapper->deleteTopic($topicName);
-        $listed2 = $this->wrapper->listTopics();
-
-        // Assert
-        $this->assertNotNull($created, '$created');
-        $this->assertNotNull($listed, '$listed');
-        $this->assertNotNull($fetched, '$fetched');
-        $this->assertNotNull($listed2, '$listed2');
-
-        $this->assertEquals($listed->getItems()->size() - 1, $listed2->getItems()->size(), '$listed2->getItems()->size()');
-    }
-
-//    public function testFilterCanSeeAndChangeRequestOrResponse() {
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testSendMessageWorks() {
 //        // Arrange
-//        $requests = array();
-//        $responses = array();
+//        $message = new BrokeredMessage('sendMessageWorks');
 //
-//        $filtered = $this->wrapper->withFilter(new ServiceFilter() {
-//            public Response handle($request, $next) {
-//                array_push($requests, $request);
-//                $response = next->handle($request);
-//                array_push($responses, $response);
-//                return $response;
-//            }
-//        });
+//        // Act
+//        $this->wrapper->sendQueueMessage('TestAlpha', $message);
 //
-//        // Act 
-//        $created = filtered->createQueue(new QueueInfo('TestFilterCanSeeAndChangeRequestOrResponse'))->getValue();
+//        // Assert
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testReceiveMessageWorks() {
+//        // Arrange
+//        $queueName = 'TestReceiveMessageWorks';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello World'));
+//
+//        // Act
+//        $message = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS)->getValue();
+//        $data = str_pad('', 100, chr(0));
+//        $size = $message->getBody()->read($data);
+//
+//        // Assert
+//        $this->assertEquals(11, $size, '$size');
+//        $this->assertArrayEquals(substr($data, 0, $size), 'Hello World');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testPeekLockMessageWorks() {
+//        // Arrange
+//        $queueName = 'TestPeekLockMessageWorks';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
+//
+//        // Act
+//        $message = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
+//
+//        // Assert
+//        $data = str_pad('', 100, chr(0));
+//        $size = $message->getBody()->read($data);
+//        $this->assertEquals(11, $size, '$size');
+//        $this->assertEquals('Hello Again', new String($data, 0, $size), 'new String($data, 0, $size)');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testPeekLockedMessageCanBeCompleted() {
+//        // Arrange
+//        $queueName = 'TestPeekLockedMessageCanBeCompleted';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
+//        $message = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
+//
+//        // Act
+//        $lockToken = $message->getLockToken();
+//        $lockedUntil = $message->getLockedUntilUtc();
+//        $lockLocation = $message->getLockLocation();
+//
+//        $this->wrapper->deleteMessage($message);
+//
+//        // Assert
+//        $this->assertNotNull($lockToken, '$lockToken');
+//        $this->assertNotNull($lockedUntil, '$lockedUntil');
+//        $this->assertNotNull($lockLocation, '$lockLocation');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::unlockMessage
+//    */
+//    public function testPeekLockedMessageCanBeUnlocked() {
+//        // Arrange
+//        $queueName = 'TestPeekLockedMessageCanBeUnlocked';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
+//        $peekedMessage = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
+//
+//        // Act
+//        $lockToken = $peekedMessage->getLockToken();
+//        $lockedUntil = $peekedMessage->getLockedUntilUtc();
+//
+//        $this->wrapper->unlockMessage($peekedMessage);
+//        $receivedMessage = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS) ->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($lockToken, '$lockToken');
+//        $this->assertNotNull($lockedUntil, '$lockedUntil');
+//        $this->assertNull($receivedMessage->getLockToken(), '$receivedMessage->getLockToken()');
+//        $this->assertNull($receivedMessage->getLockedUntilUtc(), '$receivedMessage->getLockedUntilUtc()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testPeekLockedMessageCanBeDeleted() {
+//        // Arrange
+//        $queueName = 'TestPeekLockedMessageCanBeDeleted';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//        $this->wrapper->sendQueueMessage($queueName, new BrokeredMessage('Hello Again'));
+//        $peekedMessage = $this->wrapper->receiveQueueMessage($queueName, $PEEK_LOCK_5_SECONDS)->getValue();
+//
+//        // Act
+//        $lockToken = $peekedMessage->getLockToken();
+//        $lockedUntil = $peekedMessage->getLockedUntilUtc();
+//
+//        $this->wrapper->deleteMessage($peekedMessage);
+//        $receivedMessage = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS) ->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($lockToken, '$lockToken');
+//        $this->assertNotNull($lockedUntil, '$lockedUntil');
+//        $this->assertNull($receivedMessage->getLockToken(), '$receivedMessage->getLockToken()');
+//        $this->assertNull($receivedMessage->getLockedUntilUtc(), '$receivedMessage->getLockedUntilUtc()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testContentTypePassesThrough() {
+//        // Arrange
+//        $queueName = 'TestContentTypePassesThrough';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//
+//        // Act
+//        $message = new BrokeredMessage('<data>Hello Again</data>');
+//        $message->setContentType('text/xml');
+//        $this->wrapper->sendQueueMessage($queueName, $message);
+//
+//        $message = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS)->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($message, '$message');
+//        $this->assertEquals('text/xml', $message->getContentType(), '$message->getContentType()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listTopics
+//    */
+//    public function testTopicCanBeCreatedListedFetchedAndDeleted() {
+//        // Arrange
+//        $topicName = 'TestTopicCanBeCreatedListedFetchedAndDeleted';
+//
+//        // Act
+//        $topic = new TopicInfo();
+//        $topic->setPath($topicName);
+//        $created = $this->wrapper->createTopic($topic)->getValue();
+//        $listed = $this->wrapper->listTopics();
+//        $fetched = $this->wrapper->getTopic($topicName)->getValue();
+//        $this->wrapper->deleteTopic($topicName);
+//        $listed2 = $this->wrapper->listTopics();
 //
 //        // Assert
 //        $this->assertNotNull($created, '$created');
-//        $this->assertEquals(1, count(requests), 'requests->size()');
-//        $this->assertEquals(1, count(responses), 'responses->size()');
+//        $this->assertNotNull($listed, '$listed');
+//        $this->assertNotNull($fetched, '$fetched');
+//        $this->assertNotNull($listed2, '$listed2');
+//
+//        $this->assertEquals($listed->getItems()->size() - 1, $listed2->getItems()->size(), '$listed2->getItems()->size()');
 //    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    */
-    public function testSubscriptionsCanBeCreatedOnTopics() {
-        // Arrange
-        $topicName = 'TestSubscriptionsCanBeCreatedOnTopics';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-
-        // Act
-        $created = $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription')) ->getValue();
-
-        // Assert
-        $this->assertNotNull($created, '$created');
-        $this->assertEquals('MySubscription', $created->getName(), '$created->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listSubscriptions
-    */
-    public function testSubscriptionsCanBeListed() {
-        // Arrange
-        $topicName = 'TestSubscriptionsCanBeListed';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription2'));
-
-        // Act
-        $result = $this->wrapper->listSubscriptions($topicName);
-
-        // Assert
-        $this->assertNotNull($result, '$result');
-        $this->assertEquals(1, $result->getItems()->size(), '$result->getItems()->size()');
-        $this->assertEquals('MySubscription2', $result->getItems()->get(0)->getName(), '$result->getItems()->get(0)->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getSubscription
-    */
-    public function testSubscriptionsDetailsMayBeFetched() {
-        // Arrange
-        $topicName = 'TestSubscriptionsDetailsMayBeFetched';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription3'));
-
-        // Act
-        $result = $this->wrapper->getSubscription($topicName, 'MySubscription3')->getValue();
-
-        // Assert
-        $this->assertNotNull($result, '$result');
-        $this->assertEquals('MySubscription3', $result->getName(), '$result->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listSubscriptions
-    */
-    public function testSubscriptionsMayBeDeleted() {
-        // Arrange
-        $topicName = 'TestSubscriptionsMayBeDeleted';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription4'));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription5'));
-
-        // Act
-        $this->wrapper->deleteSubscription($topicName, 'MySubscription4');
-
-        // Assert
-        $result = $this->wrapper->listSubscriptions($topicName);
-        $this->assertNotNull($result, '$result');
-        $this->assertEquals(1, $result->getItems()->size(), '$result->getItems()->size()');
-        $this->assertEquals('MySubscription5', $result->getItems()->get(0)->getName(), '$result->getItems()->get(0)->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveSubscriptionMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendTopicMessage
-    */
-    public function testSubscriptionWillReceiveMessage() {
-        // Arrange
-        $topicName = 'TestSubscriptionWillReceiveMessage';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
-        $message = new BrokeredMessage('<p>Testing subscription</p>');
-        $message->setContentType('text/html');
-        $this->wrapper->sendTopicMessage($topicName, $message);
-
-        // Act
-        $message = $this->wrapper->receiveSubscriptionMessage($topicName, 'sub', $RECEIVE_AND_DELETE_5_SECONDS) ->getValue();
-
-        // Assert
-        $this->assertNotNull($message, '$message');
-
-        $data = str_pad('', 100, chr(0));
-        $size = $message->getBody()->read($data);
-        $this->assertEquals('<p>Testing subscription</p>', new String($data, 0, $size), 'new String($data, 0, $size)');
-        $this->assertEquals('text/html', $message->getContentType(), '$message->getContentType()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    */
-    public function testRulesCanBeCreatedOnSubscriptions() {
-        // Arrange
-        $topicName = 'TestrulesCanBeCreatedOnSubscriptions';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
-
-        // Act
-        $created = $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule1'))->getValue();
-
-        // Assert
-        $this->assertNotNull($created, '$created');
-        $this->assertEquals('MyRule1', $created->getName(), '$created->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listRules
-    */
-    public function testRulesCanBeListedAndDefaultRuleIsPrecreated() {
-        // Arrange
-        $topicName = 'TestrulesCanBeListedAndDefaultRuleIsPrecreated';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
-        $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule2'));
-
-        // Act
-        $result = $this->wrapper->listRules($topicName, 'sub');
-
-        // Assert
-        $this->assertNotNull($result, '$result');
-        $this->assertEquals(2, $result->getItems()->size(), '$result->getItems()->size()');
-        $rule0 = $result->getItems()->get(0);
-        $rule1 = $result->getItems()->get(1);
-        if ($rule0->getName() == 'MyRule2') {
-            $swap = $rule1;
-            $rule1 = $rule0;
-            $rule0 = $swap;
-        }
-
-        $this->assertEquals('$Default', $rule0->getName(), '$rule0->getName()');
-        $this->assertEquals('MyRule2', $rule1->getName(), '$rule1->getName()');
-        $this->assertNotNull($result->getItems()->get(0)->getModel(), '$result->getItems()->get(0)->getModel()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getRule
-    */
-    public function testRuleDetailsMayBeFetched() {
-        // Arrange
-        $topicName = 'TestruleDetailsMayBeFetched';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
-
-        // Act
-        $result = $this->wrapper->getRule($topicName, 'sub', '$Default')->getValue();
-
-        // Assert
-        $this->assertNotNull($result, '$result');
-        $this->assertEquals('$Default', $result->getName(), '$result->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteRule
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listRules
-    */
-    public function testRulesMayBeDeleted() {
-        // Arrange
-        $topicName = 'TestRulesMayBeDeleted';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
-        $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule4'));
-        $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule5'));
-
-        // Act
-        $this->wrapper->deleteRule($topicName, 'sub', 'MyRule5');
-        $this->wrapper->deleteRule($topicName, 'sub', '$Default');
-
-        // Assert
-        $result = $this->wrapper->listRules($topicName, 'sub');
-        $this->assertNotNull($result, '$result');
-        $this->assertEquals(1, $result->getItems()->size(), '$result->getItems()->size()');
-        $this->assertEquals('MyRule4', $result->getItems()->get(0)->getName(), '$result->getItems()->get(0)->getName()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
-    */
-    public function testRulesMayHaveActionAndFilter() {
-        // Arrange
-        $topicName = 'TestRulesMayHaveAnActionAndFilter';
-        $this->wrapper->createTopic(new TopicInfo($topicName));
-        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
-
-        // Act
-        $ruleInfoOne = new RuleInfo('One');
-        $ruleInfoOne->withCorrelationIdFilter('my-id');
-        $ruleOne = $this->wrapper->createRule($topicName, 'sub', $ruleInfoOne) ->getValue();
-        $ruleInfoTwo = new RuleInfo('Two');
-        $ruleInfoTwo->withTrueFilter();
-        $ruleTwo = $this->wrapper->createRule($topicName, 'sub', $ruleInfoTwo)->getValue();
-        $ruleInfoThree = new RuleInfo('Three');
-        $ruleInfoThree->withFalseFilter();
-        $ruleThree = $this->wrapper->createRule($topicName, 'sub', $ruleInfoThree)->getValue();
-        $ruleInfoFour = new RuleInfo('Four');
-        $ruleInfoFour->withEmptyRuleAction();
-        $ruleFour = $this->wrapper->createRule($topicName, 'sub', $ruleInfoFour)->getValue();
-        $ruleInfoFive = new RuleInfo('Five');
-        $ruleInfoFive->withSqlRuleAction('SET x = 5');
-        $ruleFive = $this->wrapper->createRule($topicName, 'sub', $ruleInfoFive) ->getValue();
-        $ruleInfoSix = new RuleInfo('Six');
-        $ruleInfoSix->withSqlExpressionFilter('x != 5');
-        $ruleSix = $this->wrapper->createRule($topicName, 'sub', $ruleInfoSix) ->getValue();
-
-        // Assert
-        $this->assertEquals($ruleOne->getFilter() instanceof CorrelationFilter, '$ruleOne->getFilter()->getClass()');
-        $this->assertEquals($ruleTwo->getFilter() instanceof TrueFilter, '$ruleTwo->getFilter()->getClass()');
-        $this->assertEquals($ruleThree->getFilter() instanceof FalseFilter, '$ruleThree->getFilter()->getClass()');
-        $this->assertEquals($ruleFour->getAction() instanceof EmptyRuleAction, '$ruleFour->getAction()->getClass()');
-        $this->assertEquals($ruleFive->getAction() instanceof SqlRuleAction, '$ruleFive->getAction()->getClass()');
-        $this->assertEquals($ruleSix->getFilter() instanceof SqlFilter, '$ruleSix->getFilter()->getClass()');
-    }
-
-    /**
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
-    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
-    */
-    public function testMessagesMayHaveCustomProperties() {
-        // Arrange
-        $queueName = 'TestMessagesMayHaveCustomProperties';
-        $this->wrapper->createQueue(new QueueInfo($queueName));
-
-        // Act
-        $message = new BrokeredMessage('');
-        $message->setProperty('hello', 'world');
-        $message->setProperty('foo', 42);
-        $this->wrapper->sendQueueMessage($queueName, $message);
-        $message = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS)->getValue();
-
-        // Assert
-        $this->assertEquals('world', $message->getProperty('hello'), '$message->getProperty(\'hello\')');
-        $this->assertEquals(42, $message->getProperty('foo'), '$message->getProperty(\'foo\')');
-    }
+//
+////    public function testFilterCanSeeAndChangeRequestOrResponse() {
+////        // Arrange
+////        $requests = array();
+////        $responses = array();
+////
+////        $filtered = $this->wrapper->withFilter(new ServiceFilter() {
+////            public Response handle($request, $next) {
+////                array_push($requests, $request);
+////                $response = next->handle($request);
+////                array_push($responses, $response);
+////                return $response;
+////            }
+////        });
+////
+////        // Act 
+////        $created = filtered->createQueue(new QueueInfo('TestFilterCanSeeAndChangeRequestOrResponse'))->getValue();
+////
+////        // Assert
+////        $this->assertNotNull($created, '$created');
+////        $this->assertEquals(1, count(requests), 'requests->size()');
+////        $this->assertEquals(1, count(responses), 'responses->size()');
+////    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    */
+//    public function testSubscriptionsCanBeCreatedOnTopics() {
+//        // Arrange
+//        $topicName = 'TestSubscriptionsCanBeCreatedOnTopics';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//
+//        // Act
+//        $created = $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription')) ->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($created, '$created');
+//        $this->assertEquals('MySubscription', $created->getName(), '$created->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listSubscriptions
+//    */
+//    public function testSubscriptionsCanBeListed() {
+//        // Arrange
+//        $topicName = 'TestSubscriptionsCanBeListed';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription2'));
+//
+//        // Act
+//        $result = $this->wrapper->listSubscriptions($topicName);
+//
+//        // Assert
+//        $this->assertNotNull($result, '$result');
+//        $this->assertEquals(1, $result->getItems()->size(), '$result->getItems()->size()');
+//        $this->assertEquals('MySubscription2', $result->getItems()->get(0)->getName(), '$result->getItems()->get(0)->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getSubscription
+//    */
+//    public function testSubscriptionsDetailsMayBeFetched() {
+//        // Arrange
+//        $topicName = 'TestSubscriptionsDetailsMayBeFetched';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription3'));
+//
+//        // Act
+//        $result = $this->wrapper->getSubscription($topicName, 'MySubscription3')->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($result, '$result');
+//        $this->assertEquals('MySubscription3', $result->getName(), '$result->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listSubscriptions
+//    */
+//    public function testSubscriptionsMayBeDeleted() {
+//        // Arrange
+//        $topicName = 'TestSubscriptionsMayBeDeleted';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription4'));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('MySubscription5'));
+//
+//        // Act
+//        $this->wrapper->deleteSubscription($topicName, 'MySubscription4');
+//
+//        // Assert
+//        $result = $this->wrapper->listSubscriptions($topicName);
+//        $this->assertNotNull($result, '$result');
+//        $this->assertEquals(1, $result->getItems()->size(), '$result->getItems()->size()');
+//        $this->assertEquals('MySubscription5', $result->getItems()->get(0)->getName(), '$result->getItems()->get(0)->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveSubscriptionMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendTopicMessage
+//    */
+//    public function testSubscriptionWillReceiveMessage() {
+//        // Arrange
+//        $topicName = 'TestSubscriptionWillReceiveMessage';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
+//        $message = new BrokeredMessage('<p>Testing subscription</p>');
+//        $message->setContentType('text/html');
+//        $this->wrapper->sendTopicMessage($topicName, $message);
+//
+//        // Act
+//        $message = $this->wrapper->receiveSubscriptionMessage($topicName, 'sub', $RECEIVE_AND_DELETE_5_SECONDS) ->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($message, '$message');
+//
+//        $data = str_pad('', 100, chr(0));
+//        $size = $message->getBody()->read($data);
+//        $this->assertEquals('<p>Testing subscription</p>', new String($data, 0, $size), 'new String($data, 0, $size)');
+//        $this->assertEquals('text/html', $message->getContentType(), '$message->getContentType()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    */
+//    public function testRulesCanBeCreatedOnSubscriptions() {
+//        // Arrange
+//        $topicName = 'TestrulesCanBeCreatedOnSubscriptions';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
+//
+//        // Act
+//        $created = $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule1'))->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($created, '$created');
+//        $this->assertEquals('MyRule1', $created->getName(), '$created->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listRules
+//    */
+//    public function testRulesCanBeListedAndDefaultRuleIsPrecreated() {
+//        // Arrange
+//        $topicName = 'TestrulesCanBeListedAndDefaultRuleIsPrecreated';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
+//        $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule2'));
+//
+//        // Act
+//        $result = $this->wrapper->listRules($topicName, 'sub');
+//
+//        // Assert
+//        $this->assertNotNull($result, '$result');
+//        $this->assertEquals(2, $result->getItems()->size(), '$result->getItems()->size()');
+//        $rule0 = $result->getItems()->get(0);
+//        $rule1 = $result->getItems()->get(1);
+//        if ($rule0->getName() == 'MyRule2') {
+//            $swap = $rule1;
+//            $rule1 = $rule0;
+//            $rule0 = $swap;
+//        }
+//
+//        $this->assertEquals('$Default', $rule0->getName(), '$rule0->getName()');
+//        $this->assertEquals('MyRule2', $rule1->getName(), '$rule1->getName()');
+//        $this->assertNotNull($result->getItems()->get(0)->getModel(), '$result->getItems()->get(0)->getModel()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::getRule
+//    */
+//    public function testRuleDetailsMayBeFetched() {
+//        // Arrange
+//        $topicName = 'TestruleDetailsMayBeFetched';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
+//
+//        // Act
+//        $result = $this->wrapper->getRule($topicName, 'sub', '$Default')->getValue();
+//
+//        // Assert
+//        $this->assertNotNull($result, '$result');
+//        $this->assertEquals('$Default', $result->getName(), '$result->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::deleteRule
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::listRules
+//    */
+//    public function testRulesMayBeDeleted() {
+//        // Arrange
+//        $topicName = 'TestRulesMayBeDeleted';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
+//        $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule4'));
+//        $this->wrapper->createRule($topicName, 'sub', new RuleInfo('MyRule5'));
+//
+//        // Act
+//        $this->wrapper->deleteRule($topicName, 'sub', 'MyRule5');
+//        $this->wrapper->deleteRule($topicName, 'sub', '$Default');
+//
+//        // Assert
+//        $result = $this->wrapper->listRules($topicName, 'sub');
+//        $this->assertNotNull($result, '$result');
+//        $this->assertEquals(1, $result->getItems()->size(), '$result->getItems()->size()');
+//        $this->assertEquals('MyRule4', $result->getItems()->get(0)->getName(), '$result->getItems()->get(0)->getName()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createRule
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createSubscription
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createTopic
+//    */
+//    public function testRulesMayHaveActionAndFilter() {
+//        // Arrange
+//        $topicName = 'TestRulesMayHaveAnActionAndFilter';
+//        $this->wrapper->createTopic(new TopicInfo($topicName));
+//        $this->wrapper->createSubscription($topicName, new SubscriptionInfo('sub'));
+//
+//        // Act
+//        $ruleInfoOne = new RuleInfo('One');
+//        $ruleInfoOne->withCorrelationIdFilter('my-id');
+//        $ruleOne = $this->wrapper->createRule($topicName, 'sub', $ruleInfoOne) ->getValue();
+//        $ruleInfoTwo = new RuleInfo('Two');
+//        $ruleInfoTwo->withTrueFilter();
+//        $ruleTwo = $this->wrapper->createRule($topicName, 'sub', $ruleInfoTwo)->getValue();
+//        $ruleInfoThree = new RuleInfo('Three');
+//        $ruleInfoThree->withFalseFilter();
+//        $ruleThree = $this->wrapper->createRule($topicName, 'sub', $ruleInfoThree)->getValue();
+//        $ruleInfoFour = new RuleInfo('Four');
+//        $ruleInfoFour->withEmptyRuleAction();
+//        $ruleFour = $this->wrapper->createRule($topicName, 'sub', $ruleInfoFour)->getValue();
+//        $ruleInfoFive = new RuleInfo('Five');
+//        $ruleInfoFive->withSqlRuleAction('SET x = 5');
+//        $ruleFive = $this->wrapper->createRule($topicName, 'sub', $ruleInfoFive) ->getValue();
+//        $ruleInfoSix = new RuleInfo('Six');
+//        $ruleInfoSix->withSqlExpressionFilter('x != 5');
+//        $ruleSix = $this->wrapper->createRule($topicName, 'sub', $ruleInfoSix) ->getValue();
+//
+//        // Assert
+//        $this->assertEquals($ruleOne->getFilter() instanceof CorrelationFilter, '$ruleOne->getFilter()->getClass()');
+//        $this->assertEquals($ruleTwo->getFilter() instanceof TrueFilter, '$ruleTwo->getFilter()->getClass()');
+//        $this->assertEquals($ruleThree->getFilter() instanceof FalseFilter, '$ruleThree->getFilter()->getClass()');
+//        $this->assertEquals($ruleFour->getAction() instanceof EmptyRuleAction, '$ruleFour->getAction()->getClass()');
+//        $this->assertEquals($ruleFive->getAction() instanceof SqlRuleAction, '$ruleFive->getAction()->getClass()');
+//        $this->assertEquals($ruleSix->getFilter() instanceof SqlFilter, '$ruleSix->getFilter()->getClass()');
+//    }
+//
+//    /**
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::createQueue
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::receiveQueueMessage
+//    * @covers WindowsAzure\Services\ServiceBus\ServiceBusRestProxy::sendQueueMessage
+//    */
+//    public function testMessagesMayHaveCustomProperties() {
+//        // Arrange
+//        $queueName = 'TestMessagesMayHaveCustomProperties';
+//        $this->wrapper->createQueue(new QueueInfo($queueName));
+//
+//        // Act
+//        $message = new BrokeredMessage('');
+//        $message->setProperty('hello', 'world');
+//        $message->setProperty('foo', 42);
+//        $this->wrapper->sendQueueMessage($queueName, $message);
+//        $message = $this->wrapper->receiveQueueMessage($queueName, $RECEIVE_AND_DELETE_5_SECONDS)->getValue();
+//
+//        // Assert
+//        $this->assertEquals('world', $message->getProperty('hello'), '$message->getProperty(\'hello\')');
+//        $this->assertEquals(42, $message->getProperty('foo'), '$message->getProperty(\'foo\')');
+//    }
 }
 ?>

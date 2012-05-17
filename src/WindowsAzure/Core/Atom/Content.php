@@ -112,7 +112,7 @@ class Content
     public function toXml()
     {
         return sprintf(
-            '<content type="%s">%s</content>',
+            '<atom:content type="%s">%s</atom:content>',
             $this->_type,
             $this->_text
         );

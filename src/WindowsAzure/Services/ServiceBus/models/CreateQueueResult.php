@@ -54,7 +54,7 @@ class CreateQueueResult
     public static function create($response)
     {
         $createQueueResult = new CreateQueueResult();
-        $feed = Feed::creat($response);
+        $feed = Feed::create($response);
         $content = $feed->getContent();
         $this->_queueDescription = XmlSerializer::objectDeserialize($content->getText()); 
         return $createQueueResult;
