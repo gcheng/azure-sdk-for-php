@@ -56,7 +56,9 @@ class CreateQueueResult
         $createQueueResult = new CreateQueueResult();
         $feed = Feed::create($response);
         $content = $feed->getContent();
-        $this->_queueDescription = XmlSerializer::objectDeserialize($content->getText()); 
+        if (!is_null($content)) {
+            $this->_queueDescription = \WindowsAzure\Core\Serialization\XmlSerializer::objectDeserialize($content->getText()); 
+        }
         return $createQueueResult;
     }
 

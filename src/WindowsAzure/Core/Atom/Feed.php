@@ -47,11 +47,11 @@ class Feed
     private $_attributes;
 
     /**
-     * The entry of the feed. 
+     * The content of the feed. 
      * 
      * @var string 
      */
-    private $_entry;
+    private $_content;
 
     /**
      * The category of the feed. 
@@ -153,62 +153,80 @@ class Feed
         $feed = new Feed();
         $feedXml = simplexml_load_string($xmlString);
         $feed->setAttributes($feedXml->attributes());
-        if (array_key_exists($feedXml, 'category'))
+        var_dump($xmlString);
+        var_dump($feedXml);
+        $foo = array();
+        foreach ($feedXml as $key => $value) {
+            $foo[$key] = $value;
+        }
+        $feedXml = $foo;
+
+        if (array_key_exists('content', $feedXml))
+        {
+            $content = $feedXml['content'];
+            var_dump($content);
+            if ($content != null) {
+                $content = Content::create($content->asXml());
+            }
+            $feed->setContent($content);
+        }
+        
+        if (array_key_exists('category', $feedXml))
         {
             $category = Categtory::create($feedXml['category']);
             $feed->setCategory($category);
         }
 
-        if (array_key_exists($feedXml, 'contributor'))
+        if (array_key_exists('contributor', $feedXml))
         {
             $contributor = Person::create($feedXml['contributor']);
             $feed->setContributor($contributor);
         }
 
-        if (array_key_exists($feedXml, 'generator'))
+        if (array_key_exists('generator', $feedXml))
         {
             $generator = Generator::create($feedXml['generator']);
             $feed->setGenerator($generator);
         } 
 
-        if (array_key_exists($feedXml, 'icon'))
+        if (array_key_exists('icon', $feedXml))
         {
             $icon = Icon::create($feedXml['icon']);
             $feed->setIcon($icon);
         }
 
-        if (array_key_exists($feedXml, 'id'))
+        if (array_key_exists('id', $feedXml))
         {
             $feed->setId($feedXml['id']);
         }
 
-        if (array_key_exists($feedXml, 'link'))
-        {
-            $link = AtomLink::create($feedXml['link']);
-            $feed->setLink($link);
-        }
+//        if (array_key_exists('link', $feedXml))
+//        {
+//            $link = AtomLink::create($feedXml['link']);
+//            $feed->setLink($link);
+//        }
 
-        if (array_key_exists($feedXml, 'logo'))
+        if (array_key_exists('logo', $feedXml))
         {
             $feed->setLogo($feedXml['logo']);
         }
 
-        if (array_key_exists($feedXml, 'rights'))
+        if (array_key_exists('rights', $feedXml))
         {
             $feed->setRights($feedXml['rights']);
         }
 
-        if (array_key_exists($feedXml, 'subtitle'))
+        if (array_key_exists('subtitle', $feedXml))
         {
             $feed->setSubtitle($feedXml['subtitle']);
         }
 
-        if (array_key_exists($feedXml, 'title'))
+        if (array_key_exists('title', $feedXml))
         {
             $feed->setTitle($feedXml['title']);
         }
 
-        if (array_key_exists($feedXml, 'updated'))
+        if (array_key_exists('updated', $feedXml))
         {
             $feed->setUpdated($feedXml['updated']);
         }
@@ -234,8 +252,12 @@ class Feed
      */
     public function setAttributes($attributes)
     {
-        Validate::isArray($attributes, 'attributes');
-        $this->_attributes = $attributes;
+        var_dump($attributes);
+        $attrs = array();
+        foreach ($attributes as $key => $value) {
+            $attrs[$key] = $value;
+        }
+        $this->_attributes = $attrs;
     }
 
     public function addAttribute($attributeKey, $attributeValue)
@@ -484,23 +506,23 @@ class Feed
     }
 
     /**
-     * Gets the entry of the feed. 
+     * Gets the content of the feed. 
      * 
-     * @var Entry
+     * @var content
      */
-    public function getEntry()
+    public function getContent()
     {
-        return $this->_entry;
+        return $this->_content;
     }
 
     /**
-     * Sets the entry of the feed.
+     * Sets the content of the feed.
      * 
-     * @param Entry $entry The entry of the feed. 
+     * @param content $content The content of the feed. 
      */
-    public function setEntry($entry)
+    public function setContent($content)
     {
-        $this->_entry = $entry;
+        $this->_content = $content;
     }
 
     /** 
@@ -512,7 +534,7 @@ class Feed
      */
     public function toXml()
     {
-        $xmlWriter = new XMLWriter();
+        $xmlWriter = new \XMLWriter();
         
         $xmlWriter->openMemory();
         $xmlWriter->setIndent(true);
