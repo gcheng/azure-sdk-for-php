@@ -54,10 +54,11 @@ class CreateQueueResult
     public static function create($response)
     {
         $createQueueResult = new CreateQueueResult();
-        $feed = Feed::creat($response);
-        $entry = $feed->getEntry();
-        $content = $entry->getContent();
-        $this->_queueDescription = XmlSerializer::objectDeserialize($content->getText()); 
+        $feed = Feed::create($response);
+        $content = $feed->getContent();
+        if (!is_null($content)) {
+            $this->_queueDescription = \WindowsAzure\Core\Serialization\XmlSerializer::objectDeserialize($content->getText()); 
+        }
         return $createQueueResult;
     }
 

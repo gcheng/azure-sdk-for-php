@@ -139,7 +139,7 @@ class Generator
      */
     public function toXml()
     {
-        $xmlWriter = new XMLWriter();
+        $xmlWriter = new \XMLWriter();
         
         $xmlWriter->openMemory();
         $xmlWriter->startElement('atom:category');

@@ -490,7 +490,7 @@ class Entry
         $innerXml = '';
         if (!is_null($this->_author))
         {
-            $innerXml .= '<author>'.$this->author.'</author>';
+            $innerXml .= '<atom:author>'.$this->author.'</author>';
         }
 
         if (!is_null($this->_category))
@@ -499,12 +499,12 @@ class Entry
             {
                 foreach ($this->_category as $category)
                 {
-                    $innerXml .= '<category>'.$category.'</category>';
+                    $innerXml .= '<atom:category>'.$category.'</category>';
                 }
             }
             else
             {
-                $innerXml .= '<category>'.$this->_category.'</category>';
+                $innerXml .= '<atom:category>'.$this->_category.'</category>';
             }
         }
 
@@ -519,57 +519,59 @@ class Entry
             {
                 foreach ($this->_contributor as $contributor)
                 {
-                    $innerXml .= '<contributor>'.$contributor.'</contributor>';
+                    $innerXml .= '<atom:contributor>'.$contributor.'</atom:contributor>';
                 }
             }
             else
             {
-                $innerXml .= '<contributor>'.$this->_contributor.'</contributor>';
+                $innerXml .= '<atom:contributor>'.$this->_contributor.'</atom:contributor>';
             }
         }
 
         if (!is_null($this->_id))
         {
-            $innerXml .= '<id>'.Resources::UNIQUE_ID_PREFIX.$this->_id.'</id>';
+            $innerXml .= '<atom:id>'.Resources::UNIQUE_ID_PREFIX.$this->_id.'</atom:id>';
         }
         
         if (!is_null($this->_link))
         {
-            $innerXml .= '<link>'.$this->_link.'</link>';
+            $innerXml .= '<atom:link>'.$this->_link.'</atom:link>';
         } 
 
         if (!is_null($this->_published))
         {
-            $innerXml .= '<published>'.$this->_published.'</published>';
+            $innerXml .= '<atom:published>'.$this->_published.'</atom:published>';
         }
 
         if (!is_null($this->_rights))
         {
-            $innerXml .= '<rights>'.$this->_rights.'</rights>';
+            $innerXml .= '<atom:rights>'.$this->_rights.'</atom:rights>';
         }
 
         if (!is_null($this->_source))
         {
-            $innerXml .= '<source>'.$this->_source.'</source>';
+            $innerXml .= '<atom:source>'.$this->_source.'</atom:source>';
         }
 
         if (!is_null($this->_summary))
         {
-            $innerXml .= '<summary>'.$this->_summary.'</summary>';
+            $innerXml .= '<atom:summary>'.$this->_summary.'</atom:summary>';
         }
 
         if (!is_null($this->_title))
         { 
-            $innerXml .= '<title>'.$this->_title.'</title>';
+            $innerXml .= '<atom:title>'.$this->_title.'</atom:title>';
         }
         
         if (!is_null($this->_updated))
         {
-            $innerXml .= '<updated>'.$this->_updated.'</updated>';
+            $innerXml .= '<atom:updated>'.$this->_updated.'</atom:updated>';
         }
 
         $outerXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            .'<entry xmlns="http://www.w3.org/2005/Atom/">'.$innerXml.'</entry>';
+                . '<atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect">'
+                . $innerXml
+                . '</atom:entry>';
         return $outerXml;
     }
 

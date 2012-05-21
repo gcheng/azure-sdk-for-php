@@ -59,7 +59,7 @@ class Content
      *
      * @param string $text The text of the content.
      */
-    public function __construct($text)
+    public function __construct($text = null)
     {
         $this->_text = $text;
     }
@@ -71,10 +71,24 @@ class Content
      */ 
     public static function create($xmlString)
     {
+        var_dump("content XML string: " . $xmlString);
         $content = new Content();
         $contentXml = simplexml_load_string($xmlString);
         $attributes = $contentXml->attributes();
-        if (array_key_exists($attributes, 'type'))
+       
+//        $foo = array();
+//        foreach ($attributes as $key => $value) {
+//            $foo[$key] = $value;
+//        }
+//        $attributes = $foo;
+//   
+//        $foo = array();
+//        foreach ($contentXml as $key => $value) {
+//            $foo[$key] = $value;
+//        }
+//        $contentXml = $foo;
+        
+        if (array_key_exists('type', $attributes))
         {
             $content->setType($attributes['type']);
         }
@@ -129,7 +143,7 @@ class Content
      */
     public function toXml()
     {
-        $xmlWriter = new XMLWriter();
+        $xmlWriter = new \XMLWriter();
         $xmlWriter->openMemory();
         $xmlWriter->startElement('atom:content');
         if (!empty($this->_type))

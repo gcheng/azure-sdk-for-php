@@ -38,7 +38,7 @@ use WindowsAzure\Utilities;
  * @link      http://pear.php.net/package/azure-sdk-for-php
  */
 class QueueDescription
-{
+{ 
     /**
      * The duration of the lock.     
      * 
@@ -100,7 +100,7 @@ class QueueDescription
      * 
      * @var boolean 
      */
-    private $_enableBatchedOperations;
+    private $_enableBatchedOperation;
 
     /**
      * The size in bytes. 
@@ -267,7 +267,7 @@ class QueueDescription
      */
     public function setDuplicateDetectionHistoryTimeWindow($duplicateDetectionHistoryTimeWindow)
     {
-        $this->_duplicateDetectionHistoryTimeWindow = $duplicateDEtectionHistoryTimeWindow;
+        $this->_duplicateDetectionHistoryTimeWindow = $duplicateDetectionHistoryTimeWindow;
     }
 
     /**
