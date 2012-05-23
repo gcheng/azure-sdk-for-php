@@ -170,6 +170,7 @@ class ServiceBusRestProxy extends ServiceRestProxy implements IServiceBus
         $httpCallContext->setPath($path);
         $httpCallContext->addStatusCode(Resources::STATUS_OK);
         $httpCallContext->addStatusCode(Resources::STATUS_CREATED);
+        $httpCallContext->addHeader(Resources::CONTENT_TYPE, 'text/plain');
         $timeout = $receiveMessageOptions->getTimeout();
         if (!is_null($timeout))
         {
