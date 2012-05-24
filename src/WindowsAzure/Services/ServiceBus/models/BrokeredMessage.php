@@ -75,17 +75,10 @@ class BrokeredMessage
     /**
      * Creates a brokered message with specified broker properties. 
      */
-    public function __construct($brokerProperties = null)
+    public function __construct($message = null)
     {
-        if (!empty($brokerProperties))
-        {
-            $this->_brokerProperties = $brokerProperties;
-        }
-        else 
-        {
-            $this->_brokerProperties = new BrokerProperties();
-        }
-
+        $this->_body = $message;
+        $this->_brokerProperties = new BrokerProperties();
         $this->_customProperties = array();
     }
 

@@ -101,7 +101,7 @@ class ServiceBusRestProxy extends ServiceRestProxy implements IServiceBus
         $httpCallContext = new HttpCallContext();
         $httpCallContext->setMethod(Resources::HTTP_POST);
         $httpCallContext->addStatusCode(Resources::STATUS_CREATED);
-        $httpCallContext->setPath($path);
+        $httpCallContext->setPath($path . '/messages');
         $contentType = $brokeredMessage->getContentType();
 
         if (!is_null($contentType))
@@ -112,12 +112,12 @@ class ServiceBusRestProxy extends ServiceRestProxy implements IServiceBus
             );
         }
         
-        $brokerProperties = $brokeredMessage->getBrokerProperties();
+        $brokerProperties = '{}'; // $brokeredMessage->getBrokerProperties();
         if (!is_null($brokerProperties))
         {
             $httpCallContext->addHeader(
                 Resources::BROKER_PROPERTIES,
-                $brokerProperties->toString()
+                $brokerProperties
             );
         } 
         $customProperties = $brokeredMessage->getProperties();
@@ -183,6 +183,7 @@ class ServiceBusRestProxy extends ServiceRestProxy implements IServiceBus
         $httpCallContext->setPath($path);
         $httpCallContext->addStatusCode(Resources::STATUS_OK);
         $httpCallContext->addStatusCode(Resources::STATUS_CREATED);
+        $httpCallContext->addHeader(Resources::CONTENT_TYPE, 'text/plain');
         $timeout = $receiveMessageOptions->getTimeout();
         if (!is_null($timeout))
         {
